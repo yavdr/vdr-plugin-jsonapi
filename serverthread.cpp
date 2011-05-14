@@ -6,7 +6,7 @@
  */
 
 #include "serverthread.h"
-
+cxxtools::Utf8Codec codec;
 // Helper methods
 //
 
@@ -47,9 +47,9 @@ cChannel* GetChannel(int number)
 struct SerEvent
 {
   int Id;
-  std::string Title;
-  std::string ShortText;
-  std::string Description;
+  cxxtools::String Title;
+  cxxtools::String ShortText;
+  cxxtools::String Description;
   int StartTime;
   int Duration;
 };
@@ -79,7 +79,7 @@ void operator<<= (cxxtools::SerializationInfo& si, const SerEvents& e)
 
 struct SerChannel
 {
-  std::string Name;
+  cxxtools::String Name;
   int Number;
   int Transponder;
   std::string Stream;
@@ -116,8 +116,8 @@ void operator<<= (cxxtools::SerializationInfo& si, const SerChannels& c)
 
 struct RecordingRec
 {
-  std::string Name;
-  std::string FileName;
+  cxxtools::String Name;
+  cxxtools::String FileName;
   bool IsNew;
   bool IsEdited;
   bool IsPesRecording;
@@ -167,7 +167,7 @@ void ChannelsResponder::reply(std::ostream& out, cxxtools::http::Request& reques
   for(cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel))
   {
     if(!channel->GroupSep()) {
-      serChannel.Name = channel->Name();
+      serChannel.Name = codec.decode(channel->Name());
       serChannel.Number = channel->Number();
       serChannel.Transponder = channel->Transponder();
       serChannel.Stream = (std::string)channel->GetChannelID().ToString() + (std::string)suffix;
@@ -218,10 +218,10 @@ void EventsResponder::reply(std::ostream& out, cxxtools::http::Request& request,
 
   SerEvent serEvent;
   std::vector < struct SerEvent > serEvents;
-  const char* eventTitle;
-  const char* eventShortText;
-  const char* eventDescription;
-  const char* empty = "";
+  cxxtools::String eventTitle;
+  cxxtools::String eventShortText;
+  cxxtools::String eventDescription;
+  cxxtools::String empty = codec.decode("");
 
   cSchedulesLock MutexLock;
   const cSchedules *Schedules = cSchedules::Schedules(MutexLock);
@@ -239,13 +239,9 @@ void EventsResponder::reply(std::ostream& out, cxxtools::http::Request& request,
     int ts = event->StartTime();
     int te = ts + event->Duration();
     if ( ts <= to && te >= from ) {
-       eventTitle = event->Title();
-       eventShortText = event->ShortText();
-       eventDescription = event->Description();
-    
-       if(!eventTitle) eventTitle = empty;
-       if(!eventShortText) eventShortText = empty;
-       if(!eventDescription) eventDescription = empty; 
+       if( !event->Title() ) { eventTitle = empty; } else { eventTitle = codec.decode(event->Title()); }
+       if( !event->ShortText() ) { eventShortText = empty; } else { eventShortText = codec.decode(event->ShortText()); }
+       if( !event->Description() ) { eventDescription = empty; } else { eventDescription = codec.decode(event->Description()); }
 
        serEvent.Id = event->EventID();
        serEvent.Title = eventTitle;
@@ -296,8 +292,8 @@ void RecordingsResponder::reply(std::ostream& out, cxxtools::http::Request& requ
   reply.addHeader("Content-Type", "application/json");
   cxxtools::JsonSerializer serializer(out);
   for (cRecording* recording = Recordings.First(); recording; recording = Recordings.Next(recording)) {
-    recordingRec.Name = recording->Name();
-    recordingRec.FileName = recording->FileName();
+    recordingRec.Name = codec.decode(recording->Name());
+    recordingRec.FileName = codec.decode(recording->FileName());
     recordingRec.IsNew = recording->IsNew();
     recordingRec.IsEdited = recording->IsEdited();
     recordingRec.IsPesRecording = recording->IsPesRecording();
