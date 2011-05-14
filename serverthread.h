@@ -18,8 +18,6 @@
 #include <cxxtools/serializationinfo.h>
 #include <cxxtools/utf8codec.h>
 
-#include <boost/algorithm/string.hpp>
-
 #include <unistd.h>
 #include <vdr/tools.h>
 #include <vdr/thread.h>
